@@ -60,7 +60,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Library/Src/RM_Cilent_UI.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Library/Src/VT13_rc_ctrl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Bsp/Src/bsp_can.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Bsp/Src/bsp_uart.c
     ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/Chassis.c
     ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/Data.c
     ${CMAKE_CURRENT_SOURCE_DIR}/App/Src/Gimbal.c

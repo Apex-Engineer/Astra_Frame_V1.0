@@ -48,8 +48,7 @@ float hex_motor_power_calculate(int16_t speed_rpm, float current_pid_output)
     // 基础功率模型
     power = HEX_MOTOR_TORQUE_COEFFICIENT * current_pid_output * speed_rpm +
             HEX_MOTOR_POWER_MODEL_K2 * speed_rpm * speed_rpm +
-            HEX_MOTOR_POWER_MODEL_K1 * current_pid_output * current_pid_output +
-            HEX_MOTOR_POWER_CONSTANT;
+            HEX_MOTOR_POWER_MODEL_K1 * current_pid_output * current_pid_output + HEX_MOTOR_POWER_CONSTANT;
 
     // 如果功率为负(回馈/发电状态),计为0
     if (power < 0.0f)
@@ -139,19 +138,6 @@ static void hex_update_available_power(void)
     hex_power_ctrl.available_power = hex_power_ctrl.max_power_limit - HEX_CHASSIS_POWER_SAFETY_MARGIN +
                                      buffer_factor * HEX_CHASSIS_POWER_BUFFER_EXTRA;
 
-    // 3. 考虑超级电容 (如果需要接入超级电容,取消下面注释)
-    // if (cap_measure.cap_percent > HEX_CAPACITOR_MIN_PERCENT)
-    // {
-    //     if (hex_power_ctrl.cap_state)
-    //     {
-    //         hex_power_ctrl.available_power += HEX_CAPACITOR_BOOST_POWER;
-    //     }
-    //     else
-    //     {
-    //         hex_power_ctrl.available_power += HEX_CAPACITOR_BOOST_POWER * 0.1f;
-    //     }
-    // }
-
     // 更新最大功率记录
     if (hex_power_ctrl.total_motor_power > hex_power_ctrl.max_power_record)
     {
@@ -169,24 +155,18 @@ static void hex_calculate_motor_powers(motor_measure_DJ_t motor_measure[HEX_MOTO
 {
     hex_power_ctrl.total_motor_power = 0.0f;
 
-    // for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
-    // {
-    //     hex_power_ctrl.motor_power[i] = hex_motor_power_calculate(
-    //         motor_measure[i].speed_rpm,
-    //         chassis_pid[i].out);
-    //     hex_power_ctrl.total_motor_power += hex_power_ctrl.motor_power[i];
-    // }
     for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
     {
         if (i >= 4) // 2006电机
         {
-            hex_power_ctrl.motor_power[i] = HEX_2006_MOTOR_TORQUE_COEFFICIENT * chassis_pid[i].out * motor_measure[i].speed_rpm + HEX_2006_MOTOR_POWER_MODEL_K2 * motor_measure[i].speed_rpm * motor_measure[i].speed_rpm + HEX_2006_MOTOR_POWER_MODEL_K1 * chassis_pid[i].out * chassis_pid[i].out + HEX_2006_MOTOR_POWER_CONSTANT;
+            hex_power_ctrl.motor_power[i] =
+                HEX_2006_MOTOR_TORQUE_COEFFICIENT * chassis_pid[i].out * motor_measure[i].speed_rpm +
+                HEX_2006_MOTOR_POWER_MODEL_K2 * motor_measure[i].speed_rpm * motor_measure[i].speed_rpm +
+                HEX_2006_MOTOR_POWER_MODEL_K1 * chassis_pid[i].out * chassis_pid[i].out + HEX_2006_MOTOR_POWER_CONSTANT;
         }
         else // M3508电机
         {
-            hex_power_ctrl.motor_power[i] = hex_motor_power_calculate(
-                motor_measure[i].speed_rpm,
-                chassis_pid[i].out);
+            hex_power_ctrl.motor_power[i] = hex_motor_power_calculate(motor_measure[i].speed_rpm, chassis_pid[i].out);
         }
         hex_power_ctrl.total_motor_power += hex_power_ctrl.motor_power[i];
     }
@@ -212,21 +192,6 @@ static uint8_t hex_apply_power_limit(pid_type_def chassis_pid[HEX_MOTOR_NUM],
         // 计算功率缩放系数 (等比例缩放)
         hex_power_ctrl.power_scale = hex_power_ctrl.available_power / hex_power_ctrl.total_motor_power;
 
-        // 对每个电机应用功率限制
-        // for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
-        // {
-        //     // 计算该电机允许的目标功率
-        //     float motor_target_power = hex_power_ctrl.motor_power[i] * hex_power_ctrl.power_scale;
-
-        //     // 反算允许的电流
-        //     float limited_current = hex_motor_current_limit_by_power(
-        //         motor_measure[i].speed_rpm,
-        //         motor_target_power,
-        //         chassis_pid[i].out);
-
-        //     // 应用电流限制
-        //     chassis_pid[i].out = limited_current;
-        // }
         for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
         {
             // 计算该电机允许的目标功率
@@ -239,7 +204,8 @@ static uint8_t hex_apply_power_limit(pid_type_def chassis_pid[HEX_MOTOR_NUM],
                 // 一元二次方程: k1*I^2 + k3*w*I + (k2*w^2 + constant - P_target) = 0
                 float a = HEX_2006_MOTOR_POWER_MODEL_K1;
                 float b = HEX_2006_MOTOR_TORQUE_COEFFICIENT * motor_measure[i].speed_rpm;
-                float c = HEX_2006_MOTOR_POWER_MODEL_K2 * motor_measure[i].speed_rpm * motor_measure[i].speed_rpm + HEX_2006_MOTOR_POWER_CONSTANT - motor_target_power;
+                float c = HEX_2006_MOTOR_POWER_MODEL_K2 * motor_measure[i].speed_rpm * motor_measure[i].speed_rpm +
+                          HEX_2006_MOTOR_POWER_CONSTANT - motor_target_power;
 
                 float discriminant = b * b - 4.0f * a * c;
 
@@ -266,10 +232,8 @@ static uint8_t hex_apply_power_limit(pid_type_def chassis_pid[HEX_MOTOR_NUM],
             }
             else // M3508电机: 使用原函数
             {
-                limited_current = hex_motor_current_limit_by_power(
-                    motor_measure[i].speed_rpm,
-                    motor_target_power,
-                    chassis_pid[i].out);
+                limited_current = hex_motor_current_limit_by_power(motor_measure[i].speed_rpm, motor_target_power,
+                                                                   chassis_pid[i].out);
             }
 
             // 应用电流限制
@@ -324,24 +288,20 @@ uint8_t hex_chassis_power_control_process_ex(hex_motor_control_t *hex_ctrl)
 
     // 2. 计算各电机功率
     hex_power_ctrl.total_motor_power = 0.0f;
-    // for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
-    // {
-    //     hex_power_ctrl.motor_power[i] = hex_motor_power_calculate(
-    //         hex_ctrl->motor[i]->speed_rpm,
-    //         hex_ctrl->pid[i]->out);
-    //     hex_power_ctrl.total_motor_power += hex_power_ctrl.motor_power[i];
-    // }
     for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
     {
         if (i >= 4) // 2006电机
         {
-            hex_power_ctrl.motor_power[i] = HEX_2006_MOTOR_TORQUE_COEFFICIENT * hex_ctrl->pid[i]->out * hex_ctrl->motor[i]->speed_rpm + HEX_2006_MOTOR_POWER_MODEL_K2 * hex_ctrl->motor[i]->speed_rpm * hex_ctrl->motor[i]->speed_rpm + HEX_2006_MOTOR_POWER_MODEL_K1 * hex_ctrl->pid[i]->out * hex_ctrl->pid[i]->out + HEX_2006_MOTOR_POWER_CONSTANT;
+            hex_power_ctrl.motor_power[i] =
+                HEX_2006_MOTOR_TORQUE_COEFFICIENT * hex_ctrl->pid[i]->out * hex_ctrl->motor[i]->speed_rpm +
+                HEX_2006_MOTOR_POWER_MODEL_K2 * hex_ctrl->motor[i]->speed_rpm * hex_ctrl->motor[i]->speed_rpm +
+                HEX_2006_MOTOR_POWER_MODEL_K1 * hex_ctrl->pid[i]->out * hex_ctrl->pid[i]->out +
+                HEX_2006_MOTOR_POWER_CONSTANT;
         }
         else // M3508电机
         {
-            hex_power_ctrl.motor_power[i] = hex_motor_power_calculate(
-                hex_ctrl->motor[i]->speed_rpm,
-                hex_ctrl->pid[i]->out);
+            hex_power_ctrl.motor_power[i] =
+                hex_motor_power_calculate(hex_ctrl->motor[i]->speed_rpm, hex_ctrl->pid[i]->out);
         }
         hex_power_ctrl.total_motor_power += hex_power_ctrl.motor_power[i];
     }
@@ -355,18 +315,6 @@ uint8_t hex_chassis_power_control_process_ex(hex_motor_control_t *hex_ctrl)
 
         hex_power_ctrl.power_scale = hex_power_ctrl.available_power / hex_power_ctrl.total_motor_power;
 
-        // for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
-        // {
-        //     float motor_target_power = hex_power_ctrl.motor_power[i] * hex_power_ctrl.power_scale;
-
-        //     float limited_current = hex_motor_current_limit_by_power(
-        //         hex_ctrl->motor[i]->speed_rpm,
-        //         motor_target_power,
-        //         hex_ctrl->pid[i]->out);
-
-        //     hex_ctrl->pid[i]->out = limited_current;
-        //     hex_ctrl->limited_current[i] = limited_current;
-        // }
         for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
         {
             float motor_target_power = hex_power_ctrl.motor_power[i] * hex_power_ctrl.power_scale;
@@ -377,7 +325,9 @@ uint8_t hex_chassis_power_control_process_ex(hex_motor_control_t *hex_ctrl)
             {
                 float a = HEX_2006_MOTOR_POWER_MODEL_K1;
                 float b = HEX_2006_MOTOR_TORQUE_COEFFICIENT * hex_ctrl->motor[i]->speed_rpm;
-                float c = HEX_2006_MOTOR_POWER_MODEL_K2 * hex_ctrl->motor[i]->speed_rpm * hex_ctrl->motor[i]->speed_rpm + HEX_2006_MOTOR_POWER_CONSTANT - motor_target_power;
+                float c =
+                    HEX_2006_MOTOR_POWER_MODEL_K2 * hex_ctrl->motor[i]->speed_rpm * hex_ctrl->motor[i]->speed_rpm +
+                    HEX_2006_MOTOR_POWER_CONSTANT - motor_target_power;
 
                 float discriminant = b * b - 4.0f * a * c;
 
@@ -403,10 +353,8 @@ uint8_t hex_chassis_power_control_process_ex(hex_motor_control_t *hex_ctrl)
             }
             else // M3508电机: 使用原函数
             {
-                limited_current = hex_motor_current_limit_by_power(
-                    hex_ctrl->motor[i]->speed_rpm,
-                    motor_target_power,
-                    hex_ctrl->pid[i]->out);
+                limited_current = hex_motor_current_limit_by_power(hex_ctrl->motor[i]->speed_rpm, motor_target_power,
+                                                                   hex_ctrl->pid[i]->out);
             }
 
             hex_ctrl->pid[i]->out = limited_current;
@@ -518,8 +466,7 @@ float hex_s_curve_speed_calc(float current_speed, float target_speed, float max_
  * @param max_speed 最大速度
  * @return int16_t 下一时刻速度
  */
-int16_t hex_speed_ramp_s_curve(int16_t current, int16_t target,
-                               int16_t accel_step, int16_t decel_step,
+int16_t hex_speed_ramp_s_curve(int16_t current, int16_t target, int16_t accel_step, int16_t decel_step,
                                int16_t max_speed)
 {
     int16_t output = current;
@@ -578,17 +525,12 @@ int16_t hex_speed_ramp_s_curve(int16_t current, int16_t target,
  * @param max_speed 最大速度
  * @param output 输出速度数组 (长度6)
  */
-void hex_chassis_speed_ramp_control(int16_t current[HEX_MOTOR_NUM],
-                                    int16_t target[HEX_MOTOR_NUM],
-                                    int16_t accel_step, int16_t decel_step,
-                                    int16_t max_speed,
-                                    int16_t output[HEX_MOTOR_NUM])
+void hex_chassis_speed_ramp_control(int16_t current[HEX_MOTOR_NUM], int16_t target[HEX_MOTOR_NUM], int16_t accel_step,
+                                    int16_t decel_step, int16_t max_speed, int16_t output[HEX_MOTOR_NUM])
 {
     for (uint8_t i = 0; i < HEX_MOTOR_NUM; i++)
     {
-        output[i] = hex_speed_ramp_s_curve(current[i], target[i],
-                                           accel_step, decel_step,
-                                           max_speed);
+        output[i] = hex_speed_ramp_s_curve(current[i], target[i], accel_step, decel_step, max_speed);
     }
 }
 
@@ -624,11 +566,7 @@ void hex_chassis_power_debug_info(char *info, uint16_t len)
         return;
     }
 
-    snprintf(info, len,
-             "P:%.1f/%.1fW Buf:%.0f Scale:%.2f L:%lu",
-             hex_power_ctrl.total_motor_power,
-             hex_power_ctrl.available_power,
-             hex_power_ctrl.chassis_power_buffer,
-             hex_power_ctrl.power_scale,
+    snprintf(info, len, "P:%.1f/%.1fW Buf:%.0f Scale:%.2f L:%lu", hex_power_ctrl.total_motor_power,
+             hex_power_ctrl.available_power, hex_power_ctrl.chassis_power_buffer, hex_power_ctrl.power_scale,
              hex_power_ctrl.limit_count);
 }

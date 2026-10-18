@@ -19,20 +19,21 @@
  *  去模糊化: 重心法
  * ============================================================ */
 
-#define FUZZY_SETS   7     // 7个模糊子集
-#define FUZZY_MIN   -6     // 模糊论域最小值
-#define FUZZY_MAX    6     // 模糊论域最大值
+#define FUZZY_SETS 7 // 7个模糊子集
+#define FUZZY_MIN -6 // 模糊论域最小值
+#define FUZZY_MAX 6  // 模糊论域最大值
 
 /* 模糊控制结构体: 一个控制器的完整状态 */
-typedef struct {
+typedef struct
+{
     /* --- 配置参数 --- */
-    float Ke;       // 误差的量化因子 (物理值 → 模糊论域)
-    float Kec;      // 误差变化率的量化因子
-    float Ku;       // 输出的比例因子 (模糊论域 → 物理值)
+    float Ke;  // 误差的量化因子 (物理值 → 模糊论域)
+    float Kec; // 误差变化率的量化因子
+    float Ku;  // 输出的比例因子 (模糊论域 → 物理值)
 
-    float out_max;  // 输出上限 (绝对值)
+    float out_max; // 输出上限 (绝对值)
 
-    const int (*rule_table)[FUZZY_SETS];  // 指向 7x7 规则表的指针, 支持自定义规则
+    const int (*rule_table)[FUZZY_SETS]; // 指向 7x7 规则表的指针, 支持自定义规则
 
     /* --- 运行时状态 --- */
     float error;        // 当前误差

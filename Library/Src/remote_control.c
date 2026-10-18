@@ -31,7 +31,7 @@ void RC_init(uint8_t *rx1_buf, uint8_t *rx2_buf, uint16_t dma_buf_num)
         __HAL_DMA_DISABLE(&hdma_usart1_rx);
     }
 
-    hdma_usart1_rx.Instance->PAR = (uint32_t)&(USART1->DR);
+    hdma_usart1_rx.Instance->PAR = (uint32_t) & (USART1->DR);
     // memory buffer 1
     // 内存缓冲区1
     hdma_usart1_rx.Instance->M0AR = (uint32_t)(rx1_buf);
@@ -82,7 +82,7 @@ void sbus_to_rc(volatile const uint8_t *sbus_buf, RC_ctrl_t *rc_ctrl)
 
 void rc_read_data(data_rc_t *data_rc)
 {
-    data_rc->speed_yaw = data_rc->RC_ctrl->rc.ch[2] * 5.0;//CHASSIS_OPEN_RC_SCALE;
+    data_rc->speed_yaw = data_rc->RC_ctrl->rc.ch[2] * 5.0; //CHASSIS_OPEN_RC_SCALE;
     data_rc->angle_pitch += (data_rc->RC_ctrl->rc.ch[3] * 1.0 / 66000);
     if (data_rc->angle_pitch >= 2.0f) // 限位****
     {

@@ -36,13 +36,11 @@ static float adrc_fhan(float v1, float v2, float r, float h);
  *  │         │ 10ms 周期 → h = 0.01                             │
  *  └─────────┴──────────────────────────────────────────────────┘
  */
-void ADRC_Init(adrc_type_def *adrc,
-               float w0, float wc, float b0,
-               float r, float h, float out_max)
+void ADRC_Init(adrc_type_def *adrc, float w0, float wc, float b0, float r, float h, float out_max)
 {
     /* TD 参数 */
-    adrc->td_r  = r;
-    adrc->td_h  = h;
+    adrc->td_r = r;
+    adrc->td_h = h;
     adrc->td_v1 = 0.0f;
     adrc->td_v2 = 0.0f;
 
@@ -65,9 +63,9 @@ void ADRC_Init(adrc_type_def *adrc,
     adrc->out_max = out_max;
 
     /* 状态清零 */
-    adrc->set   = 0.0f;
-    adrc->fdb   = 0.0f;
-    adrc->out   = 0.0f;
+    adrc->set = 0.0f;
+    adrc->fdb = 0.0f;
+    adrc->out = 0.0f;
     adrc->error = 0.0f;
     adrc->disturbance = 0.0f;
 }
@@ -86,8 +84,8 @@ static void adrc_td_update(adrc_type_def *adrc, float target)
 {
     float v1 = adrc->td_v1;
     float v2 = adrc->td_v2;
-    float r  = adrc->td_r;
-    float h  = adrc->td_h;
+    float r = adrc->td_r;
+    float h = adrc->td_h;
 
     /* 使用 fhan 函数计算最速控制量 */
     float fh = adrc_fhan(v1 - target, v2, r, h);
@@ -111,9 +109,9 @@ static void adrc_td_update(adrc_type_def *adrc, float target)
  */
 static float adrc_fhan(float v1, float v2, float r, float h)
 {
-    float d  = r * h;
-    float d0 = h * d;           /* d0 = r * h^2 */
-    float y  = v1 + h * v2;
+    float d = r * h;
+    float d0 = h * d; /* d0 = r * h^2 */
+    float y = v1 + h * v2;
     float a, fhan_val;
     float a1;
 
@@ -180,7 +178,7 @@ static float adrc_fhan(float v1, float v2, float r, float h)
  */
 static void adrc_eso_update(adrc_type_def *adrc, float y, float u)
 {
-    float h  = adrc->td_h;
+    float h = adrc->td_h;
     float b0 = adrc->eso_b0;
     float b1 = adrc->eso_beta1;
     float b2 = adrc->eso_beta2;
@@ -276,7 +274,7 @@ float ADRC_Calc(adrc_type_def *adrc, float ref, float set, int max)
     if (max != 0)
     {
         float half_max = (float)(max >> 1);
-        float fmax     = (float)max;
+        float fmax = (float)max;
 
         /* 将 ESO 的 z1 解包到 ref 附近，保证观测误差取最短路径 */
         float e_z1 = adrc->eso_z1 - ref;
@@ -299,7 +297,7 @@ float ADRC_Calc(adrc_type_def *adrc, float ref, float set, int max)
     if (max != 0)
     {
         float half_max = (float)(max >> 1);
-        float fmax     = (float)max;
+        float fmax = (float)max;
         float diff = target - adrc->eso_z1;
         if (diff >= half_max)
             target -= fmax;
@@ -333,7 +331,8 @@ float ADRC_Calc(adrc_type_def *adrc, float ref, float set, int max)
 
 void ADRC_SetESOBandwidth(adrc_type_def *adrc, float w0)
 {
-    if (w0 <= 0.0f) return;  /* w0 必须 > 0，否则 ESO 增益全零，观测器失效 */
+    if (w0 <= 0.0f)
+        return; /* w0 必须 > 0，否则 ESO 增益全零，观测器失效 */
     adrc->eso_w0 = w0;
     adrc->eso_beta1 = 3.0f * w0;
     adrc->eso_beta2 = 3.0f * w0 * w0;
@@ -342,7 +341,8 @@ void ADRC_SetESOBandwidth(adrc_type_def *adrc, float w0)
 
 void ADRC_SetControllerBandwidth(adrc_type_def *adrc, float wc)
 {
-    if (wc <= 0.0f) return;  /* wc 必须 > 0，否则 kp=kd=0，控制器无输出 */
+    if (wc <= 0.0f)
+        return; /* wc 必须 > 0，否则 kp=kd=0，控制器无输出 */
     adrc->lsef_wc = wc;
     adrc->lsef_kp = wc * wc;
     adrc->lsef_kd = 2.0f * wc;

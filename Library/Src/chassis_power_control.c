@@ -97,8 +97,7 @@ void chassis_power_control_init(void)
 
 /* ==================== 主控函数 ==================== */
 
-uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
-                                      motor_measure_DJ_t motor_measure[4],
+uint8_t chassis_power_control_process(pid_type_def chassis_pid[4], motor_measure_DJ_t motor_measure[4],
                                       int16_t speed_set[4])
 {
     uint8_t is_limited = 0;
@@ -107,19 +106,7 @@ uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
      * 步骤1: 用原始速度目标计算PID，获取PID内部状态
      * (iout, last_error等，用于后续线性化参数提取)
      * ================================================================ */
-    // float saved_iout[4];
-    // float saved_last_error[4];
 
-    // for (uint8_t i = 0; i < 4; i++)
-    // {
-    //     /* 保存调用前的积分项（PID_Calc前的iout是上一拍的积分结果） */
-    //     saved_iout[i] = chassis_pid[i].iout;
-    //     saved_last_error[i] = chassis_pid[i].last_error;
-
-    //     chassis_pid[i].out = PID_Calc(&chassis_pid[i],
-    //                                    motor_measure[i].speed_rpm,
-    //                                    speed_set[i], 0);
-    // }
     float saved_iout[4];
     float saved_error[4];
 
@@ -128,25 +115,13 @@ uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
         saved_iout[i] = chassis_pid[i].iout;
         saved_error[i] = chassis_pid[i].error;
 
-        chassis_pid[i].out = PID_Calc(&chassis_pid[i],
-                                      motor_measure[i].speed_rpm,
-                                      speed_set[i],
-                                      0);
+        chassis_pid[i].out = PID_Calc(&chassis_pid[i], motor_measure[i].speed_rpm, speed_set[i], 0);
     }
 
     /* ================================================================
      * 第0层: 电流上升率限制（防起步冲击）
      * 限制每拍PID输出的变化量，防止突然给大电流导致功率尖峰
      * ================================================================ */
-    // for (uint8_t i = 0; i < 4; i++)
-    // {
-    //     float delta = chassis_pid[i].out - pc.last_pid_out[i];
-    //     if (delta > CURRENT_RISE_LIMIT)
-    //         chassis_pid[i].out = pc.last_pid_out[i] + CURRENT_RISE_LIMIT;
-    //     else if (delta < -CURRENT_RISE_LIMIT)
-    //         chassis_pid[i].out = pc.last_pid_out[i] - CURRENT_RISE_LIMIT;
-    //     pc.last_pid_out[i] = chassis_pid[i].out;
-    // }
 
     /* ================================================================
      * 估算当前实际功率 + 仿真缓冲能量
@@ -157,8 +132,7 @@ uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
     pc.total_motor_power = 0.0f;
     for (uint8_t i = 0; i < 4; i++)
     {
-        pc.motor_power[i] = motor_power_calc(motor_measure[i].speed_rpm,
-                                             pc.last_final_pid_out[i]);
+        pc.motor_power[i] = motor_power_calc(motor_measure[i].speed_rpm, pc.last_final_pid_out[i]);
         pc.total_motor_power += pc.motor_power[i];
     }
     pc.estimated_power = pc.total_motor_power;
@@ -354,26 +328,7 @@ uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
     pc.power_scale = total_scale;
 
     /* 用衰减后的转速设定值作为PID的目标值重新计算 */
-    // for (uint8_t i = 0; i < 4; i++)
-    // {
-    //     int16_t limited_speed = (int16_t)((float)speed_set[i] * total_scale);
 
-    //     /* 回退第一次PID_Calc对积分项的累加
-    //      * 恢复为PID_Calc调用前的积分值，这样第二次PID_Calc才是正确的积分
-    //      */
-    //     chassis_pid[i].iout = saved_iout[i];
-
-    //     /* 同时恢复last_error为调用前的值，这样PID_Calc的D项才正确 */
-    //     chassis_pid[i].last_error = saved_last_error[i];
-
-    //     /* 重新计算PID: 用衰减后的速度目标 */
-    //     chassis_pid[i].out = PID_Calc(&chassis_pid[i],
-    //                                   motor_measure[i].speed_rpm,
-    //                                   limited_speed, 0);
-
-    //     /* 保存最终输出，供下一拍功率估算使用 */
-    //     pc.last_final_pid_out[i] = chassis_pid[i].out;
-    // }
     for (uint8_t i = 0; i < 4; i++)
     {
         int16_t limited_speed = (int16_t)((float)speed_set[i] * total_scale);
@@ -381,10 +336,7 @@ uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
         chassis_pid[i].iout = saved_iout[i];
         chassis_pid[i].error = saved_error[i];
 
-        chassis_pid[i].out = PID_Calc(&chassis_pid[i],
-                                      motor_measure[i].speed_rpm,
-                                      limited_speed,
-                                      0);
+        chassis_pid[i].out = PID_Calc(&chassis_pid[i], motor_measure[i].speed_rpm, limited_speed, 0);
 
         float delta = chassis_pid[i].out - pc.last_final_pid_out[i];
 
@@ -423,14 +375,8 @@ uint8_t chassis_power_control_process(pid_type_def chassis_pid[4],
         pc.max_power_record = pc.total_motor_power;
 
 #if DEBUG_POWER
-    printf("P:%.1f Pred:%.1f Avail:%.1f K:%.3f KI:%.3f Buf:%.0f Corr:%.3f\n",
-           pc.estimated_power,
-           pc.power_predict,
-           pc.available_power,
-           pc.K_Reduction,
-           pc.K_I_Reduction_Min,
-           pc.sim_buffer,
-           pc.power_correction);
+    printf("P:%.1f Pred:%.1f Avail:%.1f K:%.3f KI:%.3f Buf:%.0f Corr:%.3f\n", pc.estimated_power, pc.power_predict,
+           pc.available_power, pc.K_Reduction, pc.K_I_Reduction_Min, pc.sim_buffer, pc.power_correction);
 #endif
 
     return is_limited;
@@ -477,8 +423,7 @@ float s_curve_speed_calc(float current_speed, float target_speed, float max_spee
 /**
  * @brief 带S曲线的速度斜坡控制
  */
-int16_t speed_ramp_s_curve(int16_t current, int16_t target,
-                           int16_t accel_step, int16_t decel_step, int16_t max_speed)
+int16_t speed_ramp_s_curve(int16_t current, int16_t target, int16_t accel_step, int16_t decel_step, int16_t max_speed)
 {
     int16_t output = current;
     int16_t diff = target - current;

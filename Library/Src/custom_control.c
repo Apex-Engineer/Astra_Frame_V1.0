@@ -17,13 +17,9 @@ extern float vel[6];
 extern float tor[6];
 
 /* ======================== 模块内部变量 ======================== */
-// static ArmContext_t arm_ctx = {0};
 ArmContext_t arm_ctx = {0}; /* 定义在 custom_control.c 中，供其他模块访问 */
-static ArmTorqueReport_t report = {0};
 static uint8_t arm_tx_buf_pool[ARM_TX_BUF_COUNT][40];
 static uint8_t arm_tx_buf_index = 0;
-static uint32_t arm_report_last_tick = 0;
-#define ARM_REPORT_INTERVAL_MS 10 /* 1000/10 = 100ms → 约10Hz */
 /* ======================== 工具函数 ======================== */
 
 /**
@@ -119,9 +115,7 @@ float arm_impedance_filter(ArmMotorIndex_e idx, float target_pos)
         float direction = (tau > 0.0f) ? 1.0f : -1.0f;
         /* 让步方向与力矩同向: 力往正方向推 → 目标往正方向让 */
         state->compliance_offset += direction * params->compliance_gain * excess * dt;
-        state->compliance_offset = clampf(state->compliance_offset,
-                                          -params->max_offset,
-                                          params->max_offset);
+        state->compliance_offset = clampf(state->compliance_offset, -params->max_offset, params->max_offset);
     }
     else
     {
@@ -163,19 +157,12 @@ void arm_send_mit(ArmMotorIndex_e idx, float pos, float vel, float tau)
         return;
     if (idx == ARM_MOTOR_J6 || idx == ARM_MOTOR_J5 || idx == ARM_MOTOR_J4)
     {
-        DM_custom_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx],
-                                 pos, 0.0f,
-                                 ARM_MIT_PARAMS[idx].kp,
-                                 ARM_MIT_PARAMS[idx].kd,
+        DM_custom_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx], pos, 0.0f, ARM_MIT_PARAMS[idx].kp, ARM_MIT_PARAMS[idx].kd,
                                  tau);
     }
     else
     {
-        DM_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx],
-                          pos, 0.0f,
-                          ARM_MIT_PARAMS[idx].kp,
-                          ARM_MIT_PARAMS[idx].kd,
-                          tau);
+        DM_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx], pos, 0.0f, ARM_MIT_PARAMS[idx].kp, ARM_MIT_PARAMS[idx].kd, tau);
     }
 }
 
@@ -190,10 +177,7 @@ void arm_custom_send_mit(ArmMotorIndex_e idx, float pos, float vel, float tau)
 {
     if (idx >= ARM_MOTOR_COUNT)
         return;
-    DM_custom_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx],
-                             pos, vel,
-                             ARM_MIT_PARAMS[idx].kp,
-                             ARM_MIT_PARAMS[idx].kd,
+    DM_custom_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx], pos, vel, ARM_MIT_PARAMS[idx].kp, ARM_MIT_PARAMS[idx].kd,
                              tau);
 }
 
@@ -209,19 +193,13 @@ void arm_send_mit_locked(ArmMotorIndex_e idx, float pos, float tau)
         return;
     if (idx == ARM_MOTOR_J6 || idx == ARM_MOTOR_J5 || idx == ARM_MOTOR_J4)
     {
-        DM_custom_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx],
-                                 pos, 0.0f,
-                                 ARM_MIT_PARAMS[idx].kp_lock,
-                                 ARM_MIT_PARAMS[idx].kd_lock,
-                                 tau);
+        DM_custom_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx], pos, 0.0f, ARM_MIT_PARAMS[idx].kp_lock,
+                                 ARM_MIT_PARAMS[idx].kd_lock, tau);
     }
     else
     {
-        DM_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx],
-                          pos, 0.0f,
-                          ARM_MIT_PARAMS[idx].kp_lock,
-                          ARM_MIT_PARAMS[idx].kd_lock,
-                          tau);
+        DM_motor_MIT_ctrl(&hcan2, ARM_MIT_CAN_ID[idx], pos, 0.0f, ARM_MIT_PARAMS[idx].kp_lock,
+                          ARM_MIT_PARAMS[idx].kd_lock, tau);
     }
 }
 
@@ -373,7 +351,6 @@ float arm_j1_protection_clamp(float j1_target)
         {
             return clampf(j1_target, -J1_PROTECT_LIMIT, J1_PROTECT_LIMIT);
         }
-        // return clampf(j1_target, -J1_PROTECT_LIMIT, J1_PROTECT_LIMIT);
     }
 
     /* Pitch1 正常 → J1 不限幅，原值返回 */
@@ -391,7 +368,8 @@ void gripper_control(ArmContext_t *ctx)
 {
     float step = GRIPPER_STEP;
 
-    if (IF_KEY_PRESSED_Q_VT13 && !IF_KEY_PRESSED_SHIFT_VT13) //&& !IF_KEY_PRESSED_CTRL_VT13 && !IF_KEY_PRESSED_SHIFT_VT13)
+    if (IF_KEY_PRESSED_Q_VT13 &&
+        !IF_KEY_PRESSED_SHIFT_VT13) //&& !IF_KEY_PRESSED_CTRL_VT13 && !IF_KEY_PRESSED_SHIFT_VT13)
     {
         ctx->gripper_pos += step;
     }
@@ -410,24 +388,20 @@ void gripper_control(ArmContext_t *ctx)
     else
     {
         /* 无输入：保持当前位置，零刚度 */
-        DM_custom_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_GRIPPER,
-                                 ctx->gripper_pos, 0.0f,
-                                 GRIPPER_KP_HOLD, GRIPPER_KD_HOLD, 0.0f);
+        DM_custom_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_GRIPPER, ctx->gripper_pos, 0.0f, GRIPPER_KP_HOLD, GRIPPER_KD_HOLD,
+                                 0.0f);
         osDelay(1);
         return;
     }
 
     /* 过圈处理 */
-    if (ctx->gripper_pos >= GRIPPER_POS_LIMIT ||
-        ctx->gripper_pos <= -GRIPPER_POS_LIMIT)
+    if (ctx->gripper_pos >= GRIPPER_POS_LIMIT || ctx->gripper_pos <= -GRIPPER_POS_LIMIT)
     {
         DM_motor_zeroset(&hcan2, ARM_CAN_ID_GRIPPER);
         osDelay(1);
     }
 
-    DM_custom_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_GRIPPER,
-                             ctx->gripper_pos, 0.0f,
-                             GRIPPER_KP, GRIPPER_KD, 0.0f);
+    DM_custom_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_GRIPPER, ctx->gripper_pos, 0.0f, GRIPPER_KP, GRIPPER_KD, 0.0f);
 }
 
 /* ======================== J3 手动控制（预设模式专用） ======================== */
@@ -700,31 +674,8 @@ void arm_preset_update_target(ArmContext_t *ctx)
         return;
 
     uint8_t step = ctx->preset_step;
-    const float (*src)[ARM_MOTOR_COUNT] = NULL;
+    const float(*src)[ARM_MOTOR_COUNT] = NULL;
 
-    // switch (ctx->preset_id)
-    // {
-    // case PRESET_CTRL_Z:
-    //     src = CTRL_Z_ANGLES;
-    //     break;
-    // case PRESET_CTRL_X:
-    //     src = CTRL_X_ANGLES;
-    //     break;
-    // case PRESET_CTRL_C:
-    //     src = CTRL_C_ANGLES;
-    //     break;
-    // case PRESET_CTRL_V:
-    //     src = CTRL_V_ANGLES;
-    //     break;
-    // case PRESET_SHIFT_Z:
-    //     src = SHIFT_Z_ANGLES;
-    //     break;
-    // case PRESET_SHIFT_X:
-    //     src = SHIFT_X_ANGLES;
-    //     break;
-    // default:
-    //     return;
-    // }
     switch (ctx->preset_id)
     {
     case PRESET_CTRL_Z:
@@ -750,8 +701,6 @@ void arm_preset_update_target(ArmContext_t *ctx)
     }
 
     /* 步骤越界保护 */
-    // if (step >= MAX_PRESET_STEPS)
-    //     step = MAX_PRESET_STEPS - 1;
 
     uint8_t max_steps = PRESET_MAX_STEPS[ctx->preset_id];
     if (step >= max_steps)
@@ -763,20 +712,16 @@ void arm_preset_update_target(ArmContext_t *ctx)
 
     /* 叠加 J3 手动偏移量 */
     ctx->preset_target[ARM_MOTOR_J3] += ctx->j3_manual_offset;
-    ctx->preset_target[ARM_MOTOR_J3] =
-        clampf(ctx->preset_target[ARM_MOTOR_J3], -ARM_POS_LIMIT, ARM_POS_LIMIT);
+    ctx->preset_target[ARM_MOTOR_J3] = clampf(ctx->preset_target[ARM_MOTOR_J3], -ARM_POS_LIMIT, ARM_POS_LIMIT);
 
     ctx->preset_target[ARM_MOTOR_PITCH1] += ctx->pitch1_manual_offset;
-    ctx->preset_target[ARM_MOTOR_PITCH1] =
-        clampf(ctx->preset_target[ARM_MOTOR_PITCH1], -ARM_POS_LIMIT, ARM_POS_LIMIT);
+    ctx->preset_target[ARM_MOTOR_PITCH1] = clampf(ctx->preset_target[ARM_MOTOR_PITCH1], -ARM_POS_LIMIT, ARM_POS_LIMIT);
 
     ctx->preset_target[ARM_MOTOR_J4] += ctx->j4_manual_offset;
-    ctx->preset_target[ARM_MOTOR_J4] =
-        clampf(ctx->preset_target[ARM_MOTOR_J4], -70000.0f, 70000.0f);
+    ctx->preset_target[ARM_MOTOR_J4] = clampf(ctx->preset_target[ARM_MOTOR_J4], -70000.0f, 70000.0f);
 
     ctx->preset_target[ARM_MOTOR_J1] += ctx->j1_manual_offset;
-    ctx->preset_target[ARM_MOTOR_J1] =
-        clampf(ctx->preset_target[ARM_MOTOR_J1], -ARM_POS_LIMIT, ARM_POS_LIMIT);
+    ctx->preset_target[ARM_MOTOR_J1] = clampf(ctx->preset_target[ARM_MOTOR_J1], -ARM_POS_LIMIT, ARM_POS_LIMIT);
 
     ctx->preset_target[ARM_MOTOR_J6] += ctx->j6j5_pitch_manual_offset;
     ctx->preset_target[ARM_MOTOR_J5] -= ctx->j6j5_pitch_manual_offset;
@@ -786,10 +731,8 @@ void arm_preset_update_target(ArmContext_t *ctx)
     ctx->preset_target[ARM_MOTOR_J5] += ctx->j6j5_yaw_manual_offset;
 
     /* J6/J5 限幅 */
-    ctx->preset_target[ARM_MOTOR_J6] =
-        clampf(ctx->preset_target[ARM_MOTOR_J6], -69999.0f, 69999.0f);
-    ctx->preset_target[ARM_MOTOR_J5] =
-        clampf(ctx->preset_target[ARM_MOTOR_J5], -69999.0f, 69999.0f);
+    ctx->preset_target[ARM_MOTOR_J6] = clampf(ctx->preset_target[ARM_MOTOR_J6], -69999.0f, 69999.0f);
+    ctx->preset_target[ARM_MOTOR_J5] = clampf(ctx->preset_target[ARM_MOTOR_J5], -69999.0f, 69999.0f);
 }
 
 /**
@@ -831,35 +774,35 @@ void arm_update_preset_keys(ArmContext_t *ctx)
     uint8_t cur_shift_c = (IF_KEY_PRESSED_SHIFT_VT13 && IF_KEY_PRESSED_C_VT13) ? 1 : 0;
 
 /* ---- 辅助宏 ---- */
-#define PRESET_ENTER(ctx, preset_id_val)                                  \
-    do                                                                    \
-    {                                                                     \
-        (ctx)->preset_id = (preset_id_val);                               \
-        (ctx)->preset_step = 0;                                           \
-        (ctx)->j3_manual_offset = 0.0f;                                   \
-        (ctx)->pitch1_manual_offset = 0.0f;                               \
-        (ctx)->j1_manual_offset = 0.0f;                                   \
-        (ctx)->j4_manual_offset = 0.0f;                                   \
-        (ctx)->j6j5_pitch_manual_offset = 0.0f;                           \
-        (ctx)->j6j5_yaw_manual_offset = 0.0f;                             \
-        arm_impedance_reset(ctx);                                         \
-        for (int _i = 0; _i < ARM_MOTOR_COUNT; _i++)                      \
-            (ctx)->interp_pos[_i] = data_motor.arm_motor_measure[_i].pos; \
+#define PRESET_ENTER(ctx, preset_id_val)                                                                               \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        (ctx)->preset_id = (preset_id_val);                                                                            \
+        (ctx)->preset_step = 0;                                                                                        \
+        (ctx)->j3_manual_offset = 0.0f;                                                                                \
+        (ctx)->pitch1_manual_offset = 0.0f;                                                                            \
+        (ctx)->j1_manual_offset = 0.0f;                                                                                \
+        (ctx)->j4_manual_offset = 0.0f;                                                                                \
+        (ctx)->j6j5_pitch_manual_offset = 0.0f;                                                                        \
+        (ctx)->j6j5_yaw_manual_offset = 0.0f;                                                                          \
+        arm_impedance_reset(ctx);                                                                                      \
+        for (int _i = 0; _i < ARM_MOTOR_COUNT; _i++)                                                                   \
+            (ctx)->interp_pos[_i] = data_motor.arm_motor_measure[_i].pos;                                              \
     } while (0)
 
-#define PRESET_EXIT(ctx)                                                        \
-    do                                                                          \
-    {                                                                           \
-        (ctx)->preset_id = PRESET_NONE;                                         \
-        (ctx)->preset_step = 0;                                                 \
-        (ctx)->j3_manual_offset = 0.0f;                                         \
-        (ctx)->pitch1_manual_offset = 0.0f;                                     \
-        (ctx)->j1_manual_offset = 0.0f;                                         \
-        (ctx)->j4_manual_offset = 0.0f;                                         \
-        (ctx)->j6j5_pitch_manual_offset = 0.0f;                                 \
-        (ctx)->j6j5_yaw_manual_offset = 0.0f;                                   \
-        (ctx)->pitch1_pos = data_motor.arm_motor_measure[ARM_MOTOR_PITCH1].pos; \
-        (ctx)->gripper_pos = data_motor.arm_motor_measure[ARM_GRIPPER_IDX].pos; \
+#define PRESET_EXIT(ctx)                                                                                               \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        (ctx)->preset_id = PRESET_NONE;                                                                                \
+        (ctx)->preset_step = 0;                                                                                        \
+        (ctx)->j3_manual_offset = 0.0f;                                                                                \
+        (ctx)->pitch1_manual_offset = 0.0f;                                                                            \
+        (ctx)->j1_manual_offset = 0.0f;                                                                                \
+        (ctx)->j4_manual_offset = 0.0f;                                                                                \
+        (ctx)->j6j5_pitch_manual_offset = 0.0f;                                                                        \
+        (ctx)->j6j5_yaw_manual_offset = 0.0f;                                                                          \
+        (ctx)->pitch1_pos = data_motor.arm_motor_measure[ARM_MOTOR_PITCH1].pos;                                        \
+        (ctx)->gripper_pos = data_motor.arm_motor_measure[ARM_GRIPPER_IDX].pos;                                        \
     } while (0)
 
     /* ---- Ctrl+Z: 取左上 ---- */
@@ -997,17 +940,12 @@ void arm_update_preset_keys(ArmContext_t *ctx)
 /* ======================== 模式处理函数 ======================== */
 
 /**
- * @brief  锁定模式：保持当前角度，高刚度 + 重力补偿
+ * @brief  锁定模式：保持当前角度，不叠加重力补偿。
  */
 void arm_mode_locked_handler(ArmContext_t *ctx)
 {
-    /* 计算重力补偿力矩（用于 Pitch1 锁定） */
-    float gravity_tau = -GRAVITY_COMP_COEFF * GRAVITY_COMP_ARM * cosf(GRAVITY_COMP_ANGLE - ctx->locked_pos[ARM_MOTOR_PITCH1]);
-    // 计算重力补偿力矩（用于 Pitch1 锁定）
-    // float gravity_tau = -GRAVITY_COMP_COEFF * GRAVITY_COMP_ARM * cosf(GRAVITY_COMP_ANGLE - data_motor.arm_motor_measure[ARM_MOTOR_PITCH1].pos);
     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
     {
-        // float tau = (i == ARM_MOTOR_PITCH1) ? gravity_tau : 0.0f;
         float tau = 0.0f; // 锁定模式下暂不叠加重力补偿，保持位置锁定即可
         arm_send_mit_locked((ArmMotorIndex_e)i, ctx->locked_pos[i], tau);
     }
@@ -1049,8 +987,8 @@ void arm_mode_preset_handler(ArmContext_t *ctx)
     ctx->preset_target[ARM_MOTOR_J1] = arm_j1_protection_clamp(ctx->preset_target[ARM_MOTOR_J1]);
 
     /* ---- 计算重力补偿力矩 ---- */
-    // ctx->gravity_torque = -GRAVITY_COMP_COEFF * GRAVITY_COMP_ARM * cosf(GRAVITY_COMP_ANGLE - ctx->preset_target[ARM_MOTOR_PITCH1]);
-    ctx->gravity_torque = -GRAVITY_COMP_COEFF * GRAVITY_COMP_ARM * cosf(GRAVITY_COMP_ANGLE - data_motor.arm_motor_measure[ARM_MOTOR_PITCH1].pos);
+    ctx->gravity_torque = -GRAVITY_COMP_COEFF * GRAVITY_COMP_ARM *
+                          cosf(GRAVITY_COMP_ANGLE - data_motor.arm_motor_measure[ARM_MOTOR_PITCH1].pos);
     /* ---- 计算位置误差 ---- */
     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
     {
@@ -1058,66 +996,6 @@ void arm_mode_preset_handler(ArmContext_t *ctx)
     }
 
     ctx->preset_arrived = arm_preset_check_arrived(ctx);
-
-    // if (!ctx->preset_arrived)
-    // {
-    //     /* 未到达：梯形减速 */
-    //     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
-    //     {
-    //         float scale = fminf(1.0f, fabsf(ctx->pos_error[i]) / DECEL_ZONE);
-    //         ctx->vel_cmd[i] = (ctx->pos_error[i] > 0 ? 1.0f : -1.0f) * CRUISE_VEL * scale;
-    //     }
-    //     /* 发送控制指令 */
-    //     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
-    //     {
-    //         // float tau = (i == ARM_MOTOR_PITCH1) ? ctx->gravity_torque : 0.0f;
-    //         float tau = 0.0f; // 预设位姿未到达时不叠加重力补偿，保持减速运动即可
-    //         arm_send_mit((ArmMotorIndex_e)i,
-    //                      ctx->preset_target[i], ctx->vel_cmd[i], tau);
-    //         osDelay(1);
-    //     }
-    // }
-    ////正常控制
-    // if (!ctx->preset_arrived)
-    // {
-    //     /* 每拍将 interp_pos 向目标步进一小步，实现恒速运动 */
-    //     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
-    //     {
-    //         float step_err = ctx->preset_target[i] - ctx->interp_pos[i];
-
-    //         if (fabsf(step_err) <= PRESET_STEP_SIZE)
-    //         {
-    //             /* 快到了，直接到达 */
-    //             ctx->interp_pos[i] = ctx->preset_target[i];
-    //         }
-    //         else
-    //         {
-    //             /* 向目标方向走一步 */
-    //             ctx->interp_pos[i] += (step_err > 0.0f) ? PRESET_STEP_SIZE : -PRESET_STEP_SIZE;
-    //         }
-    //     }
-
-    //     /* 发送插值位置（而非最终目标），电机跟踪的是平滑的小步目标 */
-    //     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
-    //     {
-    //         float tau = 0.0f;
-    //         arm_send_mit((ArmMotorIndex_e)i,
-    //                      ctx->interp_pos[i], 0.0f, tau);
-    //         osDelay(1);
-    //     }
-    // }
-
-    // else
-    // {
-    //     /* 已到达：高刚度锁定 + 重力补偿 */
-    //     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
-    //     {
-    //         // float tau = (i == ARM_MOTOR_PITCH1) ? ctx->gravity_torque : 0.0f;
-    //         float tau = 0.0f; // 预设位姿到达后不叠加重力补偿，保持位置锁定即可
-    //         arm_send_mit_locked((ArmMotorIndex_e)i, ctx->preset_target[i], tau);
-    //         osDelay(1);
-    //     }
-    // }
 
     // 阻抗控制版
     if (!ctx->preset_arrived)
@@ -1142,8 +1020,7 @@ void arm_mode_preset_handler(ArmContext_t *ctx)
         {
             float compliant_pos = arm_impedance_filter((ArmMotorIndex_e)i, ctx->interp_pos[i]);
             float tau = 0.0f;
-            arm_send_mit((ArmMotorIndex_e)i,
-                         compliant_pos, 0.0f, tau);
+            arm_send_mit((ArmMotorIndex_e)i, compliant_pos, 0.0f, tau);
             osDelay(1);
         }
     }
@@ -1163,20 +1040,6 @@ void arm_mode_preset_handler(ArmContext_t *ctx)
     gripper_control(ctx);
 
     /* ---- 持续发送 Pitch1 指令（覆盖上面的 MIT 控制，确保最新微调生效 + 重力补偿） ---- */
-    // DM_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_PITCH1,
-    //                   ctx->preset_target[ARM_MOTOR_PITCH1], 0.0f,
-    //                   ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kp,
-    //                   ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kd,
-    //                   ctx->gravity_torque);
-    // osDelay(1);
-
-    // /* ---- 持续发送 J3 指令（覆盖上面的 MIT 控制，确保手动偏移生效） ---- */
-    // DM_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_J3,
-    //                   ctx->preset_target[ARM_MOTOR_J3], 0.0f,
-    //                   ARM_MIT_PARAMS[ARM_MOTOR_J3].kp,
-    //                   ARM_MIT_PARAMS[ARM_MOTOR_J3].kd,
-    //                   0.0f);
-    // osDelay(1);
 }
 
 /**
@@ -1264,56 +1127,16 @@ void arm_mode_normal_handler(ArmContext_t *ctx)
     limited_pos[2] = pos[2]; /* J4 暂无限位 */
 
     /* ---- J1 联动保护：Pitch1 下压时限制 J1 旋转范围 ---- */
-    // limited_pos[4] = arm_j1_protection_clamp(limited_pos[4]);
 
     /* ---- J5/J6 合成角度（Roll + Pitch 解算） ---- */
-    // pos[0] = clampf(pos[0], -ARM_POS_LIMIT, ARM_POS_LIMIT);
-    // pos[1] = clampf(pos[1], -ARM_POS_LIMIT, ARM_POS_LIMIT);
     float roll = (pos[0] + pos[1]) / 2.0f;
     float pitch = (pos[0] - pos[1]) / 2.0f;
-    // roll = clampf(roll, -ROLL_MAX_LIMIT, ROLL_MAX_LIMIT);
-    // pitch = clampf(pitch, -PITCH_MAX_LIMIT, PITCH_MAX_LIMIT);
 
     limited_pos[0] = roll + pitch;
     limited_pos[1] = roll - pitch;
 
     /* ---- Pitch1 限位 ---- */
     float pitch1_target = -clampf(pos[5], -ARM_POS_LIMIT, ARM_POS_LIMIT);
-
-    // /* ---- 发送各关节 MIT 控制 ---- *///正常位置跟随版
-    // ZeroCrossing(ARM_MOTOR_J6, limited_pos[0], 69999.0f, -69999.0f);
-    // osDelay(1);
-    // ZeroCrossing(ARM_MOTOR_J5, limited_pos[1], 69999.0f, -69999.0f);
-    // osDelay(1);
-    // ZeroCrossing(ARM_MOTOR_J4, limited_pos[2], 69999.0f, -69999.0f);
-    // osDelay(1);
-    // arm_custom_send_mit(ARM_MOTOR_J6, limited_pos[0], 0.0f, 0.0f);
-    // osDelay(1);
-    // arm_custom_send_mit(ARM_MOTOR_J5, limited_pos[1], 0.0f, 0.0f);
-    // osDelay(1);
-    // arm_custom_send_mit(ARM_MOTOR_J4, limited_pos[2], 0.0f, 0.0f);
-    // osDelay(1);
-
-    // // arm_send_mit(ARM_MOTOR_J6, limited_pos[0], 0.0f, 0.0f);
-    // // osDelay(1);
-    // // arm_send_mit(ARM_MOTOR_J5, limited_pos[1], 0.0f, 0.0f);
-    // // osDelay(1);
-    // // arm_send_mit(ARM_MOTOR_J4, limited_pos[2], 0.0f, 0.0f);
-    // // osDelay(1);
-
-    // arm_send_mit(ARM_MOTOR_J3, limited_pos[3], 0.0f, 0.0f);
-    // osDelay(1);
-    // arm_send_mit(ARM_MOTOR_J1, limited_pos[4], 0.0f, 0.0f);
-    // osDelay(1);
-
-    // /* ---- Pitch1 由外部 pos[5] 驱动 ---- */
-    // ctx->pitch1_pos = pitch1_target;
-    // DM_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_PITCH1,
-    //                   pitch1_target, 0.0f,
-    //                   ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kp,
-    //                   ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kd,
-    //                   0.0f);
-    // osDelay(1);
 
     // 阻抗控制版
     /* ---- 发送各关节 MIT 控制（经阻抗滤波） ---- */
@@ -1345,11 +1168,8 @@ void arm_mode_normal_handler(ArmContext_t *ctx)
     /* ---- Pitch1 ---- */
     float cp5 = arm_impedance_filter(ARM_MOTOR_PITCH1, pitch1_target);
     ctx->pitch1_pos = cp5;
-    DM_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_PITCH1,
-                      cp5, 0.0f,
-                      ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kp,
-                      ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kd,
-                      0.0f);
+    DM_motor_MIT_ctrl(&hcan2, ARM_CAN_ID_PITCH1, cp5, 0.0f, ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kp,
+                      ARM_MIT_PARAMS[ARM_MOTOR_PITCH1].kd, 0.0f);
     osDelay(1);
 
     /* ---- 夹爪控制 ---- */
@@ -1396,11 +1216,9 @@ void arm_control_task(void)
             arm_ctx.system_ready = 0;
         }
         /* ---- 电机在线检测 ---- */
-        // arm_check_motor_online(&arm_ctx);
 
         /* ---- B 键锁定切换 ---- */
         arm_update_lock_state(&arm_ctx);
-
 
         /* ---- 根据模式分发处理 ---- */
         if (arm_ctx.arm_locked)
@@ -1429,19 +1247,6 @@ void arm_control_task(void)
             }
         }
         /* ---- 30Hz 扭矩上报 ---- */
-        // uint32_t now = HAL_GetTick();
-        // if (now - arm_report_last_tick >= ARM_REPORT_INTERVAL_MS)
-        // {
-        //     arm_report_last_tick = now;
-
-        //     //ArmTorqueReport_t report;
-        //     for (int i = 0; i < ARM_MOTOR_COUNT; i++)
-        //     {
-        //         report.torque[i] = data_motor.arm_motor_measure[i].tor;
-        //     }
-        //     memset(report.reserved, 0, sizeof(report.reserved));
-        //     ArmTorque_ReportSend(&report);
-        // }
 
         osDelay(10);
     }

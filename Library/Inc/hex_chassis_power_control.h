@@ -10,46 +10,45 @@
 /* ========== 六轮底盘功率控制配置 ========== */
 
 /* 电机数量定义 */
-#define HEX_MOTOR_NUM               (6)             // 六轮底盘电机数量
+#define HEX_MOTOR_NUM (6) // 六轮底盘电机数量
 
 /* 电机功率模型参数 - 基于西交利物浦开源方案 */
 /* 这些参数需要通过实际电机测试数据进行拟合调整 */
-#define HEX_MOTOR_POWER_MODEL_K1        (1.23e-07f)     // 电流平方项系数 a
-#define HEX_MOTOR_POWER_MODEL_K2        (1.453e-07f)    // 转速平方项系数 k2
-// #define HEX_MOTOR_TORQUE_COEFFICIENT    (1.99688994e-6f) // 转矩系数 (20/16384)*(0.3)*(187/3591)/9.55???
-#define HEX_MOTOR_TORQUE_COEFFICIENT    (2.43316593e-6f) // 转矩系数 (20/16384)*(0.3)*(1/15.76)/9.55???
-#define HEX_MOTOR_POWER_CONSTANT        (4.081f)        // 常数项 
+#define HEX_MOTOR_POWER_MODEL_K1 (1.23e-07f)          // 电流平方项系数 a
+#define HEX_MOTOR_POWER_MODEL_K2 (1.453e-07f)         // 转速平方项系数 k2
+#define HEX_MOTOR_TORQUE_COEFFICIENT (2.43316593e-6f) // 转矩系数 (20/16384)*(0.3)*(1/15.76)/9.55???
+#define HEX_MOTOR_POWER_CONSTANT (4.081f)             // 常数项
 
-#define HEX_2006_MOTOR_POWER_MODEL_K1        (3.69e-7 )     // 2006电机电流平方项系数X  K1_2006 ≈ 3~5 × K1_3508 = 3.69e-7 ~ 6.15e-7
-#define HEX_2006_MOTOR_POWER_MODEL_K2        (2.9e-7)    // 2006电机转速平方项系数X  K2_2006 ≈ 2~3 × K2_3508 = 2.9e-7 ~ 4.36e-7
-#define HEX_2006_MOTOR_TORQUE_COEFFICIENT    (5.23560209e-7f) // 2006电机转矩系数 (10/10000)*(0.18)*(1/36)/9.55=5.23560209E - 7
-#define HEX_2006_MOTOR_POWER_CONSTANT        (2.0f)        // 常数项 X
-
+#define HEX_2006_MOTOR_POWER_MODEL_K1 (3.69e-7) // 2006电机电流平方项系数X  K1_2006 ≈ 3~5 × K1_3508 = 3.69e-7 ~ 6.15e-7
+#define HEX_2006_MOTOR_POWER_MODEL_K2 (2.9e-7) // 2006电机转速平方项系数X  K2_2006 ≈ 2~3 × K2_3508 = 2.9e-7 ~ 4.36e-7
+#define HEX_2006_MOTOR_TORQUE_COEFFICIENT                                                                              \
+    (5.23560209e-7f)                         // 2006电机转矩系数 (10/10000)*(0.18)*(1/36)/9.55=5.23560209E - 7
+#define HEX_2006_MOTOR_POWER_CONSTANT (2.0f) // 常数项 X
 
 /* 功率控制参数 */
-#define HEX_CHASSIS_POWER_MAX_DEFAULT   (120.0f)        // 默认最大功率
-#define HEX_CHASSIS_BUFFER_MAX          (120.0f)        // 缓冲能量最大值
-#define HEX_CHASSIS_POWER_SAFETY_MARGIN (5.0f)          // 功率安全余量
-#define HEX_CHASSIS_POWER_BUFFER_EXTRA  (30.0f)         // 缓冲满时额外可用功率
-#define HEX_CAPACITOR_BOOST_POWER       (200.0f)        // 超级电容爆发功率
-#define HEX_CAPACITOR_MIN_PERCENT       (5.0f)          // 电容最小可用百分比
+#define HEX_CHASSIS_POWER_MAX_DEFAULT (120.0f) // 默认最大功率
+#define HEX_CHASSIS_BUFFER_MAX (120.0f)        // 缓冲能量最大值
+#define HEX_CHASSIS_POWER_SAFETY_MARGIN (5.0f) // 功率安全余量
+#define HEX_CHASSIS_POWER_BUFFER_EXTRA (30.0f) // 缓冲满时额外可用功率
+#define HEX_CAPACITOR_BOOST_POWER (200.0f)     // 超级电容爆发功率
+#define HEX_CAPACITOR_MIN_PERCENT (5.0f)       // 电容最小可用百分比
 
 /* S曲线加减速参数 */
-#define HEX_S_CURVE_ACCEL_RATIO         (0.3f)          // 加速段比例
-#define HEX_S_CURVE_DECEL_RATIO         (0.3f)          // 减速段比例
-#define HEX_S_CURVE_MAX_FACTOR          (1.5f)          // S曲线最大加速因子
+#define HEX_S_CURVE_ACCEL_RATIO (0.3f) // 加速段比例
+#define HEX_S_CURVE_DECEL_RATIO (0.3f) // 减速段比例
+#define HEX_S_CURVE_MAX_FACTOR (1.5f)  // S曲线最大加速因子
 
 /* ========== 六轮底盘电机编号定义 ========== */
 /* 六轮布局: 左前LF 左中LM 左后LB 右前RF 右中RM 右后RB */
 /* 索引: 0     1     2     3     4     5 */
 typedef enum
 {
-    HEX_MOTOR_LF = 0,   // 左前轮 Left Front
-    HEX_MOTOR_LM = 1,   // 左中轮 Left Middle
-    HEX_MOTOR_LB = 2,   // 左后轮 Left Back
-    HEX_MOTOR_RF = 3,   // 右前轮 Right Front
-    HEX_MOTOR_RM = 4,   // 右中轮 Right Middle
-    HEX_MOTOR_RB = 5,   // 右后轮 Right Back
+    HEX_MOTOR_LF = 0, // 左前轮 Left Front
+    HEX_MOTOR_LM = 1, // 左中轮 Left Middle
+    HEX_MOTOR_LB = 2, // 左后轮 Left Back
+    HEX_MOTOR_RF = 3, // 右前轮 Right Front
+    HEX_MOTOR_RM = 4, // 右中轮 Right Middle
+    HEX_MOTOR_RB = 5, // 右后轮 Right Back
 } hex_motor_index_e;
 
 /**
@@ -57,19 +56,19 @@ typedef enum
  */
 typedef struct
 {
-    float chassis_power;                // 当前底盘功率 (来自裁判系统)
-    float chassis_power_buffer;         // 缓冲能量
-    float max_power_limit;              // 最大功率限制
-    float available_power;              // 计算后的可用功率
+    float chassis_power;        // 当前底盘功率 (来自裁判系统)
+    float chassis_power_buffer; // 缓冲能量
+    float max_power_limit;      // 最大功率限制
+    float available_power;      // 计算后的可用功率
 
-    float motor_power[HEX_MOTOR_NUM];   // 各电机功率估算 [6个电机]
-    float total_motor_power;            // 总电机功率
+    float motor_power[HEX_MOTOR_NUM]; // 各电机功率估算 [6个电机]
+    float total_motor_power;          // 总电机功率
 
-    uint8_t cap_state;                  // 超级电容状态: 0=正常 1=爆发
-    float power_scale;                  // 功率缩放系数 (限制时<1)
+    uint8_t cap_state; // 超级电容状态: 0=正常 1=爆发
+    float power_scale; // 功率缩放系数 (限制时<1)
 
-    uint32_t limit_count;               // 功率限制触发次数统计
-    float max_power_record;             // 历史最大功率记录
+    uint32_t limit_count;   // 功率限制触发次数统计
+    float max_power_record; // 历史最大功率记录
 } hex_chassis_power_control_t;
 
 /**
@@ -77,10 +76,10 @@ typedef struct
  */
 typedef struct
 {
-    pid_type_def *pid[HEX_MOTOR_NUM];               // PID控制器指针数组
-    motor_measure_DJ_t *motor[HEX_MOTOR_NUM];       // 电机测量数据指针数组
-    int16_t speed_set[HEX_MOTOR_NUM];               // 速度设定值数组
-    float limited_current[HEX_MOTOR_NUM];           // 限制后的电流值
+    pid_type_def *pid[HEX_MOTOR_NUM];         // PID控制器指针数组
+    motor_measure_DJ_t *motor[HEX_MOTOR_NUM]; // 电机测量数据指针数组
+    int16_t speed_set[HEX_MOTOR_NUM];         // 速度设定值数组
+    float limited_current[HEX_MOTOR_NUM];     // 限制后的电流值
 } hex_motor_control_t;
 
 /* ========== 函数声明 ========== */
@@ -185,9 +184,8 @@ float hex_s_curve_speed_calc(float current_speed, float target_speed, float max_
  * @param max_speed 最大速度 (用于S曲线计算)
  * @return int16_t 下一时刻速度
  */
-int16_t hex_speed_ramp_s_curve(int16_t current, int16_t target,
-                                int16_t accel_step, int16_t decel_step,
-                                int16_t max_speed);
+int16_t hex_speed_ramp_s_curve(int16_t current, int16_t target, int16_t accel_step, int16_t decel_step,
+                               int16_t max_speed);
 
 /**
  * @brief 六轮底盘独立速度斜坡控制
@@ -198,11 +196,8 @@ int16_t hex_speed_ramp_s_curve(int16_t current, int16_t target,
  * @param max_speed 最大速度
  * @param output 输出速度数组 (长度6)
  */
-void hex_chassis_speed_ramp_control(int16_t current[HEX_MOTOR_NUM],
-                                    int16_t target[HEX_MOTOR_NUM],
-                                    int16_t accel_step, int16_t decel_step,
-                                    int16_t max_speed,
-                                    int16_t output[HEX_MOTOR_NUM]);
+void hex_chassis_speed_ramp_control(int16_t current[HEX_MOTOR_NUM], int16_t target[HEX_MOTOR_NUM], int16_t accel_step,
+                                    int16_t decel_step, int16_t max_speed, int16_t output[HEX_MOTOR_NUM]);
 
 /**
  * @brief 获取单个电机的功率占比

@@ -101,9 +101,8 @@ float PID_Calc_Inc(pid_type_def *pid, float ref, float set, int max)
         }
     }
 
-    float delta_u = pid->Kp * (pid->error - pid->last_error)
-                    + pid->Ki * pid->error
-                    + pid->Kd * (pid->error - 2 * pid->last_error + pid->last_last_error);
+    float delta_u = pid->Kp * (pid->error - pid->last_error) + pid->Ki * pid->error +
+                    pid->Kd * (pid->error - 2 * pid->last_error + pid->last_last_error);
     pid->out += delta_u;
 
     // 输出限幅
@@ -117,7 +116,6 @@ float PID_Calc_Inc(pid_type_def *pid, float ref, float set, int max)
     }
     return pid->out;
 }
-
 
 /* ============================================================
  *  模糊 PID 控制器
@@ -133,39 +131,39 @@ float PID_Calc_Inc(pid_type_def *pid, float ref, float set, int max)
  *        EC: NB  NM  NS  ZO  PS  PM  PB
  *  E: */
 static const int FUZZY_PID_RULE_KP[7][7] = {
-    { 6,  6,  5,  5,  4,  3,  3 },  // NB
-    { 6,  5,  5,  4,  4,  3,  2 },  // NM
-    { 5,  5,  4,  4,  3,  2,  2 },  // NS
-    { 5,  4,  4,  3,  2,  2,  1 },  // ZO
-    { 4,  4,  3,  2,  2,  1,  1 },  // PS
-    { 4,  3,  2,  2,  1,  1,  0 },  // PM
-    { 3,  3,  2,  1,  1,  0,  0 },  // PB
+    {6, 6, 5, 5, 4, 3, 3}, // NB
+    {6, 5, 5, 4, 4, 3, 2}, // NM
+    {5, 5, 4, 4, 3, 2, 2}, // NS
+    {5, 4, 4, 3, 2, 2, 1}, // ZO
+    {4, 4, 3, 2, 2, 1, 1}, // PS
+    {4, 3, 2, 2, 1, 1, 0}, // PM
+    {3, 3, 2, 1, 1, 0, 0}, // PB
 };
 
 /* Ki 整定规则表: 小误差时增大 Ki 消除静差, 大误差时减小 Ki 防止积分饱和
  *        EC: NB  NM  NS  ZO  PS  PM  PB
  *  E: */
 static const int FUZZY_PID_RULE_KI[7][7] = {
-    { 0,  0,  1,  1,  2,  3,  3 },  // NB
-    { 0,  1,  1,  2,  3,  3,  4 },  // NM
-    { 1,  1,  2,  3,  3,  4,  4 },  // NS
-    { 1,  2,  3,  3,  4,  5,  5 },  // ZO
-    { 2,  3,  3,  4,  4,  5,  5 },  // PS
-    { 3,  3,  4,  5,  5,  6,  6 },  // PM
-    { 3,  4,  4,  5,  6,  6,  6 },  // PB
+    {0, 0, 1, 1, 2, 3, 3}, // NB
+    {0, 1, 1, 2, 3, 3, 4}, // NM
+    {1, 1, 2, 3, 3, 4, 4}, // NS
+    {1, 2, 3, 3, 4, 5, 5}, // ZO
+    {2, 3, 3, 4, 4, 5, 5}, // PS
+    {3, 3, 4, 5, 5, 6, 6}, // PM
+    {3, 4, 4, 5, 6, 6, 6}, // PB
 };
 
 /* Kd 整定规则表: 误差中等且变化快时增大 Kd 抑制超调, 稳态时适度 Kd 抑制抖动
  *        EC: NB  NM  NS  ZO  PS  PM  PB
  *  E: */
 static const int FUZZY_PID_RULE_KD[7][7] = {
-    { 4,  4,  3,  3,  2,  1,  1 },  // NB
-    { 4,  3,  3,  2,  2,  1,  1 },  // NM
-    { 3,  3,  2,  2,  1,  1,  2 },  // NS
-    { 3,  2,  2,  1,  1,  2,  3 },  // ZO
-    { 2,  2,  1,  1,  2,  3,  3 },  // PS
-    { 2,  1,  1,  2,  3,  3,  4 },  // PM
-    { 1,  1,  2,  3,  3,  4,  4 },  // PB
+    {4, 4, 3, 3, 2, 1, 1}, // NB
+    {4, 3, 3, 2, 2, 1, 1}, // NM
+    {3, 3, 2, 2, 1, 1, 2}, // NS
+    {3, 2, 2, 1, 1, 2, 3}, // ZO
+    {2, 2, 1, 1, 2, 3, 3}, // PS
+    {2, 1, 1, 2, 3, 3, 4}, // PM
+    {1, 1, 2, 3, 3, 4, 4}, // PB
 };
 
 /**
@@ -184,11 +182,8 @@ static const int FUZZY_PID_RULE_KD[7][7] = {
  *
  * @note   模糊输出论域为 [-6, 6], 因此 Ku = Kx_max / 6
  */
-void Fuzzy_PID_init(fuzzy_pid_type_def *fpid,
-                    float Kp0, float Ki0, float Kd0,
-                    float i_max, float max_out,
-                    float Kp_max, float Ki_max, float Kd_max,
-                    float Ke, float Kec)
+void Fuzzy_PID_init(fuzzy_pid_type_def *fpid, float Kp0, float Ki0, float Kd0, float i_max, float max_out, float Kp_max,
+                    float Ki_max, float Kd_max, float Ke, float Kec)
 {
     // 初始化基础 PID
     PID_init(&fpid->pid, Kp0, Ki0, Kd0, i_max, max_out);

@@ -1,5 +1,5 @@
 #ifndef PID_H
-#define PID_H 
+#define PID_H
 
 #include "main.h"
 #include "stdint.h"
@@ -42,13 +42,11 @@ typedef struct
     float i_max;
     float out;
 
-}pid_type_def;
+} pid_type_def;
 
-
-void PID_init(pid_type_def* pid , float Kp , float Ki , float Kd , float i_max , float max_out);
-float PID_Calc(pid_type_def* pid , float ref , float set , int max);
-float PID_Calc_Inc(pid_type_def* pid , float ref , float set , int max);
-
+void PID_init(pid_type_def *pid, float Kp, float Ki, float Kd, float i_max, float max_out);
+float PID_Calc(pid_type_def *pid, float ref, float set, int max);
+float PID_Calc_Inc(pid_type_def *pid, float ref, float set, int max);
 
 /**
   * @brief  模糊PID结构体
@@ -86,13 +84,8 @@ typedef struct
 
 } fuzzy_pid_type_def;
 
-
-void Fuzzy_PID_init(fuzzy_pid_type_def* fpid,
-                    float Kp0, float Ki0, float Kd0,
-                    float i_max, float max_out,
-                    float Kp_max, float Ki_max, float Kd_max,
-                    float Ke, float Kec);
-float Fuzzy_PID_Calc(fuzzy_pid_type_def* fpid, float ref, float set, int max);
-
+void Fuzzy_PID_init(fuzzy_pid_type_def *fpid, float Kp0, float Ki0, float Kd0, float i_max, float max_out, float Kp_max,
+                    float Ki_max, float Kd_max, float Ke, float Kec);
+float Fuzzy_PID_Calc(fuzzy_pid_type_def *fpid, float ref, float set, int max);
 
 #endif

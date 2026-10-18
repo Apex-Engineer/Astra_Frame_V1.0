@@ -4,5 +4,4 @@
 #include "bsp_can.h"
 #include "motor.h"
 
-
 #endif

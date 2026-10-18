@@ -1,6 +1,5 @@
 #include "Fuzzy.h"
 
-
 /* ============================================================
  *  第一部分: 隶属度函数 — 一个数字属于某个词的"程度"
  *
@@ -23,13 +22,13 @@
 
 // 7个模糊集的三角形参数 [左底a, 顶点b, 右底c]
 static const float MF_PARAM[7][3] = {
-    {-6, -6, -4},  // NB: 左开, 三角形只有右半边
-    {-6, -4, -2},  // NM: 完整三角形
-    {-4, -2,  0},  // NS
-    {-2,  0,  2},  // ZO
-    { 0,  2,  4},  // PS
-    { 2,  4,  6},  // PM
-    { 4,  6,  6},  // PB: 右开, 三角形只有左半边
+    {-6, -6, -4}, // NB: 左开, 三角形只有右半边
+    {-6, -4, -2}, // NM: 完整三角形
+    {-4, -2, 0},  // NS
+    {-2, 0, 2},   // ZO
+    {0, 2, 4},    // PS
+    {2, 4, 6},    // PM
+    {4, 6, 6},    // PB: 右开, 三角形只有左半边
 };
 
 // 计算 x 在模糊集 set 上的隶属度 (0.0 ~ 1.0)
@@ -39,9 +38,12 @@ static float membership(float x, int set)
     float b = MF_PARAM[set][1];
     float c = MF_PARAM[set][2];
 
-    if (x <= a || x >= c) return 0.0f;   // 完全不属于
-    if (x <= b) return (x - a) / (b - a); // 上升边
-    else        return (c - x) / (c - b); // 下降边
+    if (x <= a || x >= c)
+        return 0.0f; // 完全不属于
+    if (x <= b)
+        return (x - a) / (b - a); // 上升边
+    else
+        return (c - x) / (c - b); // 下降边
 }
 
 /* ============================================================
@@ -71,18 +73,17 @@ static float membership(float x, int set)
  * ============================================================ */
 static const int RULE_TABLE[7][7] = {
     // EC: NB  NM  NS  ZO  PS  PM  PB     E:
-    {     6,  6,  5,  5,  4,  3,  3 },  // NB (输出PB=6, PM=5, PS=4, ZO=3)
-    {     6,  5,  5,  4,  4,  3,  2 },  // NM
-    {     5,  5,  4,  4,  3,  2,  2 },  // NS
-    {     5,  4,  4,  3,  2,  2,  1 },  // ZO
-    {     4,  4,  3,  2,  2,  1,  1 },  // PS
-    {     4,  3,  2,  2,  1,  1,  0 },  // PM
-    {     3,  3,  2,  1,  1,  0,  0 },  // PB (输出NB=0)
+    {6, 6, 5, 5, 4, 3, 3}, // NB (输出PB=6, PM=5, PS=4, ZO=3)
+    {6, 5, 5, 4, 4, 3, 2}, // NM
+    {5, 5, 4, 4, 3, 2, 2}, // NS
+    {5, 4, 4, 3, 2, 2, 1}, // ZO
+    {4, 4, 3, 2, 2, 1, 1}, // PS
+    {4, 3, 2, 2, 1, 1, 0}, // PM
+    {3, 3, 2, 1, 1, 0, 0}, // PB (输出NB=0)
 };
 
 // 每个模糊集的中心值 (用于去模糊化)
 static const float CENTER[7] = {-6.0f, -4.0f, -2.0f, 0.0f, 2.0f, 4.0f, 6.0f};
-
 
 static float fuzzy_inference(float e, float ec, const int rule_table[FUZZY_SETS][FUZZY_SETS])
 {
@@ -95,18 +96,20 @@ static float fuzzy_inference(float e, float ec, const int rule_table[FUZZY_SETS]
      *   输出词"NS(负小)"的确定程度是 50%
      */
 
-    float output_mu[7] = {0.0f};  // 7个输出词的隶属度, 全部初始化为0
+    float output_mu[7] = {0.0f}; // 7个输出词的隶属度, 全部初始化为0
 
     /* 遍历全部 7×7 = 49 条规则 */
-    for (int i = 0; i < 7; i++)      // i = E 属于哪个词 (行)
+    for (int i = 0; i < 7; i++) // i = E 属于哪个词 (行)
     {
-        float mu_e = membership(e, i);  // E 对第 i 个词的隶属度//只对前三个词有隶属度？
-        if (mu_e == 0.0f) continue;     // E 跟这个词没关系, 跳过这一整行
+        float mu_e = membership(e, i); // E 对第 i 个词的隶属度//只对前三个词有隶属度？
+        if (mu_e == 0.0f)
+            continue; // E 跟这个词没关系, 跳过这一整行
 
-        for (int j = 0; j < 7; j++)   // j = EC 属于哪个词 (列)
+        for (int j = 0; j < 7; j++) // j = EC 属于哪个词 (列)
         {
             float mu_ec = membership(ec, j); // EC 对第 j 个词的隶属度
-            if (mu_ec == 0.0f) continue;     // EC 跟这个词没关系, 跳过
+            if (mu_ec == 0.0f)
+                continue; // EC 跟这个词没关系, 跳过
 
             /* ---- 关键: 规则激活度 = min(μ_E, μ_EC) ----
              *
@@ -168,21 +171,20 @@ static float fuzzy_inference(float e, float ec, const int rule_table[FUZZY_SETS]
      *           最终位置是所有投票的加权平均值
      */
 
-    float numerator   = 0.0f;  // 分子: Σ (隶属度 × 中心值)
-    float denominator = 0.0f;  // 分母: Σ (隶属度)
+    float numerator = 0.0f;   // 分子: Σ (隶属度 × 中心值)
+    float denominator = 0.0f; // 分母: Σ (隶属度)
 
     for (int k = 0; k < 7; k++)
     {
-        numerator   += output_mu[k] * CENTER[k];
+        numerator += output_mu[k] * CENTER[k];
         denominator += output_mu[k];
     }
 
-    if (denominator < 0.0001f) return 0.0f;  // 无规则激活, 返回 0
+    if (denominator < 0.0001f)
+        return 0.0f; // 无规则激活, 返回 0
 
     return numerator / denominator;
 }
-
-
 
 /**
  * @brief  初始化模糊控制器
@@ -201,14 +203,14 @@ static float fuzzy_inference(float e, float ec, const int rule_table[FUZZY_SETS]
  */
 void Fuzzy_init(fuzzy_type_def *fuzzy, float Ke, float Kec, float Ku, float out_max)
 {
-    fuzzy->Ke         = Ke;
-    fuzzy->Kec        = Kec;
-    fuzzy->Ku         = Ku;
-    fuzzy->out_max    = out_max;
-    fuzzy->rule_table = RULE_TABLE;  // 默认使用内置规则表
-    fuzzy->error      = 0.0f;
+    fuzzy->Ke = Ke;
+    fuzzy->Kec = Kec;
+    fuzzy->Ku = Ku;
+    fuzzy->out_max = out_max;
+    fuzzy->rule_table = RULE_TABLE; // 默认使用内置规则表
+    fuzzy->error = 0.0f;
     fuzzy->last_error = 0.0f;
-    fuzzy->out        = 0.0f;
+    fuzzy->out = 0.0f;
 }
 
 /**
@@ -231,29 +233,35 @@ void Fuzzy_init_ex(fuzzy_type_def *fuzzy, float Ke, float Kec, float Ku, float o
 float Fuzzy_Calc(fuzzy_type_def *fuzzy, float ref, float set)
 {
     /* --- 1. 计算误差和误差变化率 --- */
-    fuzzy->error        = set - ref;
+    fuzzy->error = set - ref;
     fuzzy->error_change = fuzzy->error - fuzzy->last_error;
-    fuzzy->last_error   = fuzzy->error;
+    fuzzy->last_error = fuzzy->error;
 
     /* --- 2. 量化: 物理值 → 模糊论域 [-6, 6] --- */
-    float e  = fuzzy->error        * fuzzy->Ke;
+    float e = fuzzy->error * fuzzy->Ke;
     float ec = fuzzy->error_change * fuzzy->Kec;
 
     // 限幅到模糊论域
-    if (e  >  FUZZY_MAX) e  =  FUZZY_MAX;
-    if (e  < -FUZZY_MAX) e  = -FUZZY_MAX;
-    if (ec >  FUZZY_MAX) ec =  FUZZY_MAX;
-    if (ec < -FUZZY_MAX) ec = -FUZZY_MAX;
+    if (e > FUZZY_MAX)
+        e = FUZZY_MAX;
+    if (e < -FUZZY_MAX)
+        e = -FUZZY_MAX;
+    if (ec > FUZZY_MAX)
+        ec = FUZZY_MAX;
+    if (ec < -FUZZY_MAX)
+        ec = -FUZZY_MAX;
 
     /* --- 3. 模糊推理 + 去模糊化 --- */
-    float u_fuzzy = fuzzy_inference(e, ec, fuzzy->rule_table);  // 结果在 [-6, 6] 范围
+    float u_fuzzy = fuzzy_inference(e, ec, fuzzy->rule_table); // 结果在 [-6, 6] 范围
 
     /* --- 4. 反量化: 模糊论域 → 物理输出 --- */
     fuzzy->out = u_fuzzy * fuzzy->Ku;
 
     /* --- 5. 输出限幅 --- */
-    if (fuzzy->out >  fuzzy->out_max)  fuzzy->out =  fuzzy->out_max;
-    if (fuzzy->out < -fuzzy->out_max)  fuzzy->out = -fuzzy->out_max;
+    if (fuzzy->out > fuzzy->out_max)
+        fuzzy->out = fuzzy->out_max;
+    if (fuzzy->out < -fuzzy->out_max)
+        fuzzy->out = -fuzzy->out_max;
 
     return fuzzy->out;
 }
@@ -268,18 +276,24 @@ float Fuzzy_Calc(fuzzy_type_def *fuzzy, float ref, float set)
 float Fuzzy_Calc_Raw(fuzzy_type_def *fuzzy, float e, float ec)
 {
     // 限幅到模糊论域
-    if (e  >  FUZZY_MAX) e  =  FUZZY_MAX;
-    if (e  < -FUZZY_MAX) e  = -FUZZY_MAX;
-    if (ec >  FUZZY_MAX) ec =  FUZZY_MAX;
-    if (ec < -FUZZY_MAX) ec = -FUZZY_MAX;
+    if (e > FUZZY_MAX)
+        e = FUZZY_MAX;
+    if (e < -FUZZY_MAX)
+        e = -FUZZY_MAX;
+    if (ec > FUZZY_MAX)
+        ec = FUZZY_MAX;
+    if (ec < -FUZZY_MAX)
+        ec = -FUZZY_MAX;
 
     // 模糊推理 + 去模糊化, 结果在 [-6, 6] 范围
     float u_fuzzy = fuzzy_inference(e, ec, fuzzy->rule_table);
 
     // 反量化并限幅
     float out = u_fuzzy * fuzzy->Ku;
-    if (out >  fuzzy->out_max) out =  fuzzy->out_max;
-    if (out < -fuzzy->out_max) out = -fuzzy->out_max;
+    if (out > fuzzy->out_max)
+        out = fuzzy->out_max;
+    if (out < -fuzzy->out_max)
+        out = -fuzzy->out_max;
 
     return out;
 }

@@ -29,30 +29,27 @@ void Chassis_AdaptivePID_Init(void)
     for (int i = 0; i < 4; i++)
     {
         /* 初始化参数与原有PID一致 */
-        AdaptivePID_Init(&chassis_adaptive_pid_vel[i],
-                         10.5f,      /* Kp初始值 */
-                         0.15f,      /* Ki初始值 */
-                         0.35f,      /* Kd初始值 */
-                         4000.0f,    /* 积分限幅 */
-                         16384.0f,   /* 输出限幅（M3508最大电流） */
-                         0.01f);     /* 控制周期 10ms */
+        AdaptivePID_Init(&chassis_adaptive_pid_vel[i], 10.5f, /* Kp初始值 */
+                         0.15f,                               /* Ki初始值 */
+                         0.35f,                               /* Kd初始值 */
+                         4000.0f,                             /* 积分限幅 */
+                         16384.0f,                            /* 输出限幅（M3508最大电流） */
+                         0.01f);                              /* 控制周期 10ms */
 
         /* 【可选】自定义自适应参数 */
         /* 学习率：越小越保守，越大收敛越快但可能振荡 */
-        AdaptivePID_SetAdaptiveGain(&chassis_adaptive_pid_vel[i],
-                                     0.0005f,   /* gamma_p：Kp调整速度 */
-                                     0.00005f,  /* gamma_i：Ki调整速度（慢10倍） */
-                                     0.00005f); /* gamma_d：Kd调整速度 */
+        AdaptivePID_SetAdaptiveGain(&chassis_adaptive_pid_vel[i], 0.0005f, /* gamma_p：Kp调整速度 */
+                                    0.00005f,                              /* gamma_i：Ki调整速度（慢10倍） */
+                                    0.00005f);                             /* gamma_d：Kd调整速度 */
 
         /* 参数变化范围：Kp可以在 [3.5, 31.5] 之间变化 */
-        AdaptivePID_SetParamRange(&chassis_adaptive_pid_vel[i],
-                                   3.0f,   /* Kp范围倍数 */
-                                   5.0f,   /* Ki范围倍数 */
-                                   3.0f);  /* Kd范围倍数 */
+        AdaptivePID_SetParamRange(&chassis_adaptive_pid_vel[i], 3.0f, /* Kp范围倍数 */
+                                  5.0f,                               /* Ki范围倍数 */
+                                  3.0f);                              /* Kd范围倍数 */
 
         /* 调试阶段先禁用自适应，确认基础PID正常后再启用 */
         /* AdaptivePID_Enable(&chassis_adaptive_pid_vel[i], 1); */
-        AdaptivePID_Enable(&chassis_adaptive_pid_vel[i], 0);  /* 默认禁用，调试时手动开启 */
+        AdaptivePID_Enable(&chassis_adaptive_pid_vel[i], 0); /* 默认禁用，调试时手动开启 */
     }
 }
 
@@ -73,11 +70,10 @@ void Chassis_AdaptivePID_Control(void)
     for (int i = 0; i < 4; i++)
     {
         /* 自适应PID计算（接口与 PID_Calc 完全一致） */
-        float current_output = AdaptivePID_Calc(
-            &chassis_adaptive_pid_vel[i],
-            data_motor.Chassis_motor_measure[i].speed_rpm,  /* 实际转速 */
-            chassis_speed_set[i],                            /* 目标转速 */
-            0);                                              /* 无角度环绕 */
+        float current_output =
+            AdaptivePID_Calc(&chassis_adaptive_pid_vel[i], data_motor.Chassis_motor_measure[i].speed_rpm, /* 实际转速 */
+                             chassis_speed_set[i], /* 目标转速 */
+                             0);                   /* 无角度环绕 */
 
         /* 发送到电机 */
         chassis_speed[i] = (int16_t)current_output;
@@ -137,13 +133,12 @@ void Chassis_MRAC_Init(void)
     {
         /* 参考模型：tau_m = 0.02s → 期望50ms内达到稳态 */
         /* K_m = 1.0 → 单位增益（输出跟踪输入） */
-        MRAC_Init(&chassis_mrac_vel[i],
-                  0.02f,      /* tau_m：期望响应时间常数 */
-                  1.0f,       /* K_m：稳态增益 */
-                  0.001f,     /* gamma1：前馈学习率 */
-                  0.001f,     /* gamma2：反馈学习率 */
-                  0.01f,      /* dt：10ms控制周期 */
-                  16384.0f);  /* out_max：M3508最大电流 */
+        MRAC_Init(&chassis_mrac_vel[i], 0.02f, /* tau_m：期望响应时间常数 */
+                  1.0f,                        /* K_m：稳态增益 */
+                  0.001f,                      /* gamma1：前馈学习率 */
+                  0.001f,                      /* gamma2：反馈学习率 */
+                  0.01f,                       /* dt：10ms控制周期 */
+                  16384.0f);                   /* out_max：M3508最大电流 */
 
         /* 【可选】启用σ修正（增强鲁棒性，防止参数漂移） */
         MRAC_SetSigma(&chassis_mrac_vel[i], 0.005f);
@@ -161,11 +156,8 @@ void Chassis_MRAC_Control(void)
 
     for (int i = 0; i < 4; i++)
     {
-        float current_output = MRAC_Calc(
-            &chassis_mrac_vel[i],
-            data_motor.Chassis_motor_measure[i].speed_rpm,
-            chassis_speed_set[i],
-            0);
+        float current_output =
+            MRAC_Calc(&chassis_mrac_vel[i], data_motor.Chassis_motor_measure[i].speed_rpm, chassis_speed_set[i], 0);
 
         chassis_speed[i] = (int16_t)current_output;
     }
@@ -221,17 +213,15 @@ void Arm_GainSchedulePID_Init(void)
     /* 模式2：半伸展 */
     /* 模式3：完全伸展（转动惯量最大，Kp要小防止振荡） */
     float Kp_table[4] = {15.0f, 12.0f, 8.0f, 5.0f};
-    float Ki_table[4] = {0.2f,  0.15f, 0.1f, 0.05f};
-    float Kd_table[4] = {0.5f,  0.6f,  0.8f, 1.0f};
+    float Ki_table[4] = {0.2f, 0.15f, 0.1f, 0.05f};
+    float Kd_table[4] = {0.5f, 0.6f, 0.8f, 1.0f};
 
     /* 调度阈值：用机械臂某关节角度（度）作为调度变量 */
     float thresholds[3] = {30.0f, 60.0f, 90.0f};
 
-    GainSchedulePID_Init(&arm_gain_schedule_pid,
-                         Kp_table, Ki_table, Kd_table,
-                         thresholds,
-                         30.0f,    /* 输出限幅（DM电机MIT模式力矩限制） */
-                         10.0f);   /* 积分限幅 */
+    GainSchedulePID_Init(&arm_gain_schedule_pid, Kp_table, Ki_table, Kd_table, thresholds,
+                         30.0f,  /* 输出限幅（DM电机MIT模式力矩限制） */
+                         10.0f); /* 积分限幅 */
 }
 
 /**
@@ -240,12 +230,10 @@ void Arm_GainSchedulePID_Init(void)
  */
 float Arm_GainSchedulePID_Control(float ref, float set, float joint_angle)
 {
-    return GainSchedulePID_Calc(
-        &arm_gain_schedule_pid,
-        ref,            /* 反馈值（如编码器位置） */
-        set,            /* 目标值 */
-        joint_angle,    /* 调度变量（关节角度） */
-        0);             /* 无角度环绕 */
+    return GainSchedulePID_Calc(&arm_gain_schedule_pid, ref, /* 反馈值（如编码器位置） */
+                                set,                         /* 目标值 */
+                                joint_angle,                 /* 调度变量（关节角度） */
+                                0);                          /* 无角度环绕 */
 }
 
 /* ============================================================================
@@ -263,12 +251,12 @@ float Arm_GainSchedulePID_Control(float ref, float set, float joint_angle)
  */
 typedef struct
 {
-    gain_schedule_pid_type_def gspid;   /* 增益调度（大范围粗调） */
-    adaptive_pid_type_def apid;          /* 自适应PID（小范围细调） */
-    uint8_t strategy;                    /* 0=仅增益调度, 1=混合 */
+    gain_schedule_pid_type_def gspid; /* 增益调度（大范围粗调） */
+    adaptive_pid_type_def apid;       /* 自适应PID（小范围细调） */
+    uint8_t strategy;                 /* 0=仅增益调度, 1=混合 */
 } hybrid_control_t;
 
-static hybrid_control_t arm_hybrid_ctrl[6];  /* 6关节 */
+static hybrid_control_t arm_hybrid_ctrl[6]; /* 6关节 */
 
 void Arm_Hybrid_Init(void)
 {
@@ -293,7 +281,7 @@ float Arm_Hybrid_Control(int joint_id, float ref, float set, float schedule_var)
     /* 自适应PID在基础参数上微调 */
     /* ... */
 
-    return 0.0f;  /* 占位 */
+    return 0.0f; /* 占位 */
 }
 
 /* ============================================================================

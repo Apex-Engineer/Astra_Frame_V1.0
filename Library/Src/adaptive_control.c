@@ -10,9 +10,7 @@
  *  设置初始PID参数、自适应参数范围、学习率等
  *  所有内部状态清零，参数恢复到初始值
  */
-void AdaptivePID_Init(adaptive_pid_type_def *apid,
-                      float Kp, float Ki, float Kd,
-                      float i_max, float out_max, float dt)
+void AdaptivePID_Init(adaptive_pid_type_def *apid, float Kp, float Ki, float Kd, float i_max, float out_max, float dt)
 {
     /* ---- 保存初始参数（自适应的中心点） ---- */
     apid->Kp_init = Kp;
@@ -245,9 +243,7 @@ float AdaptivePID_Calc_Inc(adaptive_pid_type_def *apid, float ref, float set, in
     float delta_e = apid->error - apid->last_error;
     float delta2_e = apid->error - 2.0f * apid->last_error + apid->last_last_error;
 
-    float delta_u = apid->Kp * delta_e
-                  + apid->Ki * apid->error * apid->dt
-                  + apid->Kd * delta2_e / apid->dt;
+    float delta_u = apid->Kp * delta_e + apid->Ki * apid->error * apid->dt + apid->Kd * delta2_e / apid->dt;
 
     apid->out += delta_u;
 
@@ -294,8 +290,7 @@ float AdaptivePID_Calc_Inc(adaptive_pid_type_def *apid, float ref, float set, in
 /**
  * @brief  在线修改自适应学习率
  */
-void AdaptivePID_SetAdaptiveGain(adaptive_pid_type_def *apid,
-                                  float gamma_p, float gamma_i, float gamma_d)
+void AdaptivePID_SetAdaptiveGain(adaptive_pid_type_def *apid, float gamma_p, float gamma_i, float gamma_d)
 {
     apid->gamma_p = gamma_p;
     apid->gamma_i = gamma_i;
@@ -305,8 +300,7 @@ void AdaptivePID_SetAdaptiveGain(adaptive_pid_type_def *apid,
 /**
  * @brief  在线修改参数变化范围
  */
-void AdaptivePID_SetParamRange(adaptive_pid_type_def *apid,
-                                float Kp_range, float Ki_range, float Kd_range)
+void AdaptivePID_SetParamRange(adaptive_pid_type_def *apid, float Kp_range, float Ki_range, float Kd_range)
 {
     if (Kp_range > 1.0f)
     {
@@ -369,10 +363,7 @@ void AdaptivePID_RestoreDefaults(adaptive_pid_type_def *apid)
  *  参考模型：τ_m · dy_m/dt + y_m = K_m · r
  *  离散化（欧拉法）：y_m(k+1) = y_m(k) + dt · [-(1/τ_m)·y_m(k) + (K_m/τ_m)·r(k)]
  */
-void MRAC_Init(mrac_type_def *mrac,
-               float tau_m, float K_m,
-               float gamma1, float gamma2,
-               float dt, float out_max)
+void MRAC_Init(mrac_type_def *mrac, float tau_m, float K_m, float gamma1, float gamma2, float dt, float out_max)
 {
     /* ---- 参考模型参数 ---- */
     mrac->tau_m = (tau_m > 0.0f) ? tau_m : MRAC_DEFAULT_TAU_M;
@@ -473,8 +464,8 @@ void MRAC_Init(mrac_type_def *mrac,
 float MRAC_Calc(mrac_type_def *mrac, float ref, float set, int max)
 {
     /* ========== Step 1: 保存输入 ========== */
-    mrac->fdb = ref;    /* y_p */
-    mrac->set = set;    /* r */
+    mrac->fdb = ref; /* y_p */
+    mrac->set = set; /* r */
 
     /* ========== Step 2: 运行参考模型 ========== */
     /* 连续模型：τ_m·dy_m/dt + y_m = K_m·r
@@ -582,12 +573,9 @@ void MRAC_Reset(mrac_type_def *mrac)
 /**
  * @brief  初始化增益调度PID
  */
-void GainSchedulePID_Init(gain_schedule_pid_type_def *gspid,
-                          const float Kp_table[GAIN_SCHEDULE_MODES],
-                          const float Ki_table[GAIN_SCHEDULE_MODES],
-                          const float Kd_table[GAIN_SCHEDULE_MODES],
-                          const float thresholds[GAIN_SCHEDULE_MODES - 1],
-                          float out_max, float i_max)
+void GainSchedulePID_Init(gain_schedule_pid_type_def *gspid, const float Kp_table[GAIN_SCHEDULE_MODES],
+                          const float Ki_table[GAIN_SCHEDULE_MODES], const float Kd_table[GAIN_SCHEDULE_MODES],
+                          const float thresholds[GAIN_SCHEDULE_MODES - 1], float out_max, float i_max)
 {
     uint8_t i;
 
@@ -610,7 +598,7 @@ void GainSchedulePID_Init(gain_schedule_pid_type_def *gspid,
     gspid->schedule_var = 0.0f;
 
     /* 平滑过渡参数 */
-    gspid->transition_rate = 0.2f;  /* 每周期最多变化20% */
+    gspid->transition_rate = 0.2f; /* 每周期最多变化20% */
     gspid->Kp_smooth = Kp_table[0];
     gspid->Ki_smooth = Ki_table[0];
     gspid->Kd_smooth = Kd_table[0];
@@ -641,8 +629,7 @@ void GainSchedulePID_Init(gain_schedule_pid_type_def *gspid,
  *
  *  模式切换时参数平滑过渡，防止输出跳变。
  */
-float GainSchedulePID_Calc(gain_schedule_pid_type_def *gspid,
-                           float ref, float set, float schedule_var, int max)
+float GainSchedulePID_Calc(gain_schedule_pid_type_def *gspid, float ref, float set, float schedule_var, int max)
 {
     uint8_t new_mode;
     float target_Kp, target_Ki, target_Kd;
@@ -728,8 +715,7 @@ float GainSchedulePID_Calc(gain_schedule_pid_type_def *gspid,
 /**
  * @brief  在线修改某一模式的参数
  */
-void GainSchedulePID_SetModeParams(gain_schedule_pid_type_def *gspid,
-                                    uint8_t mode, float Kp, float Ki, float Kd)
+void GainSchedulePID_SetModeParams(gain_schedule_pid_type_def *gspid, uint8_t mode, float Kp, float Ki, float Kd)
 {
     if (mode < GAIN_SCHEDULE_MODES)
     {
